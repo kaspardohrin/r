@@ -10,7 +10,7 @@ wish <- read.csv("wish_current.csv")
 
 # unitssold
 createUnitSoldLabelColumn <- function() {
-  wish$unit_sold_label[(wish$units_sold > 1) & (wish$units_sold < 100)] <- 1
+  wish$unit_sold_label[wish$units_sold < 100] <- 1
   wish$unit_sold_label[(wish$units_sold >= 100) & (wish$units_sold < 1000)] <- 2
   wish$unit_sold_label[(wish$units_sold >= 1000) & (wish$units_sold < 5000)] <- 3
   wish$unit_sold_label[wish$units_sold >= 5000] <- 4
@@ -18,7 +18,7 @@ createUnitSoldLabelColumn <- function() {
 
 #rating
 createRatingLabelColumn <- function() {
-  wish$rating_label[(wish$rating > 1) & (wish$rating < 3.540)] <- 1
+  wish$rating_label[wish$rating < 3.540] <- 1
   wish$rating_label[(wish$rating >= 3.540) & (wish$rating < 3.840)] <- 2
   wish$rating_label[(wish$rating >= 3.808) & (wish$rating < 4.100)] <- 3
   wish$rating_label[wish$rating >= 4.100] <- 4
