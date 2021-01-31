@@ -1,6 +1,10 @@
 library(shiny)
 library(httr)
+require(dplyr)
+
+require(tidyverse)
 # https://stackoverflow.com/questions/33526256/dynamically-display-images-from-upload-in-shiny-ui/33529261
+
 
 #ui
 ui <- fluidPage(
@@ -19,23 +23,22 @@ ui <- fluidPage(
                          h3("Discount"), 
                          value = 1),
             checkboxInput("adboost", "Using ad boosts", FALSE),
+            checkboxInput("urgencybanner", "Urgency banner", FALSE),
             checkboxInput("shippingexpress", "Are you shipping express?", FALSE),
+            numericInput("merchantrating", 
+                         h3("Merchant rating"), 
+                         value = 1),
             checkboxInput("badgeshipping", "Badge Shipping", FALSE),
             checkboxInput("badgelocalproduct", "Badge Local Product", FALSE),
-            textInput("imageurl", "Upload your photo", value = "",),
-            submitButton("Update View", icon("refresh")),
+            checkboxInput("badgequalityproduct", "Badge Local Product", FALSE),
+            #textInput("imageurl", "Upload your photo", value = "",),
+            actionButton("submit", "submit"),
           ),
           mainPanel(
             h2(id="subtitle", "Informatie over de unit sold"),
-            textOutput("numberoftags"),
-            textOutput("price"),
-            textOutput("discount"),
-            verbatimTextOutput("adboost"),
-            verbatimTextOutput("shippingexpress"),
-            verbatimTextOutput("badgeshipping"),
-            verbatimTextOutput("badgelocalproduct"),
-            verbatimTextOutput("imageurl"),
-            tableOutput('files'),
+            uiOutput('table'),
+            #verbatimTextOutput("imageurl"),
+            #tableOutput('files'),
             uiOutput('images')
           )
         ),
@@ -53,19 +56,6 @@ ui <- fluidPage(
 )
 #server
 server <- function(input, output) {
-  ## server things
-  output$numberoftags <- renderText({
-    paste("Number of tags you have chosen: ", input$numberoftags)
-  })
-  
-  output$price <- renderText({
-    paste("Price of the product you have chosen: ", input$price)
-  })
-  
-  output$discount <- renderText({
-    paste("Discount of the product you have chosen: ", input$discount)
-  })
-  
   output$imageurl <- renderText({
     if(nchar(input$imageurl) > 0) {
       api_key = 'acc_fcf864a5cff4e89'
@@ -89,36 +79,41 @@ server <- function(input, output) {
       }
   })
   
-  output$adboost <- renderText({ input$adboost })
-  output$shippingexpress <- renderText({ input$shippingexpress })
-  output$badgeshipping <- renderText({ input$badgeshipping })
-  output$badgelocalproduct <- renderText({ input$badgelocalproduct })
-  
   # prepare data
-  wish_unitsold_df_scaled$wish.unit_sold_label <- wish_unitsold_df$wish.unit_sold_label
+  # dataframe
+  Data = reactive({
+    print(input$submit)
+    if (input$submit > 0) {
+      predict_data =  data.frame(
+        wish.unit_sold_label = "?",
+        wish.price = input$price,
+        wish.discount = input$discount,
+        wish.numberof_tags_label = input$numberoftags,
+        wish.uses_ad_boosts = input$adboost,
+        wish.shipping_is_express = input$shippingexpress,
+        wish.merchant_rating = input$merchantrating,
+        wish.badge_fast_shipping = input$badgeshipping,
+        wish.badge_local_product = input$badgelocalproduct,
+        wish.badge_product_quality = input$badgequalityproduct,
+        wish.has_urgency_banner = input$urgencybanner,
+        image_confidence = input$numberoftags,
+      ) 
+      return(list(df=predict_data))
+    }
+  })
+      
+  output$table <- renderTable({
+    if (is.null(Data())) {return()}
+    print(Data()$df)
+  }, 'include.rownames' = FALSE
+  , 'include.colnames' = TRUE
+  , 'sanitize.text.function' = function(x){x}
+  )
   
-  # kNN
-  library(DMwR)
-  library(class)
-  
-  idxs <- sample(1:nrow(wish_unitsold_df_scaled), as.integer(0.7*nrow(wish_unitsold_df_scaled)))
-  wish_unitsold_df_scaled.train <- wish_unitsold_df_scaled[idxs,]
-  wish_unitsold_df_scaled.test <- wish_unitsold_df_scaled[-idxs,]
-  
-  as.factor(wish_unitsold_df_scaled$wish.unit_sold_label)
-  cl <- as.factor(wish_unitsold_df_scaled.train$wish.units_sold_label)
-  
-  # prediction
-  nn3 <- knn(train= wish_unitsold_df_scaled.train, test = wish_unitsold_df_scaled.test, cl= cl, k=3)
-  nn5 <- knn(train= wish_unitsold_df_scaled.train, test = wish_unitsold_df_scaled.test, cl =cl, k=5)
-  nn7 <- knn(train= wish_unitsold_df_scaled.train, test = wish_unitsold_df_scaled.test, cl = cl, k=7)
-  nn10 <- knn(train= wish_unitsold_df_scaled.train, test = wish_unitsold_df_scaled.test, cl =cl, k=10)
-  
-  knn.predict()
-  acc.3 <- 100 * sum(wish_unitsold_df_scaled.test$image_confidence == nn3)/NROW(wish_unitsold_df_scaled.test$image_confidence) # 99.778%
-  acc.5 <- 100 * sum(wish_unitsold_df_scaled.test$image_confidence == nn5)/NROW(wish_unitsold_df_scaled.test$image_confidence) # 99.778%
-  acc.7 <- 100 * sum(wish_unitsold_df_scaled.test$image_confidence == nn7)/NROW(wish_unitsold_df_scaled.test$image_confidence) # 99.5575%
-  acc.10 <- 100 * sum(wish_unitsold_df_scaled.test$image_confidence == nn10)/NROW(wish_unitsold_df_scaled.test$image_confidence) # 99.5575%
+  output$unitssold <- renderText({
+    if (is.null(Data())) {return()}
+    
+  })
 }
 
 shinyApp(ui= ui, server = server)

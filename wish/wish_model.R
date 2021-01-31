@@ -34,22 +34,30 @@ wish_model_numbers <- subset(wish_model_numbers, select= -c(label))
 # kNN
 library(DMwR)
 library(class)
+library("imputeTS")
 
-idxs <- sample(1:nrow(wish_model_numbers),as.integer(0.7*nrow(wish_model_numbers)))
-wish_model_numbers.train <- wish_model_numbers[idxs,]
-wish_model_numbers.test <- wish_model_numbers[-idxs,]
+wish_df <- read.csv("/Users/ireneprins/wish_unitssold_df.csv")
+wish_df$wish.has_urgency_banner <- na.replace(wish_df$wish.has_urgency_banner, 0)
+wish_df_scale <- data.frame(scale(wish_df))
+wish_df_scale <- na.omit(wish_df_scale)
 
-cl <- factor(wish_model_numbers.train$image_confidence)
+idxs <- sample(1:nrow(wish_df_scale),as.integer(0.7*nrow(wish_df_scale)))
+
+wish_df_scale.train <- wish_df_scale[idxs,]
+wish_df_scale.test <- wish_df_scale[-idxs,]
+
+cl <- factor(wish_df_scale.train$wish.unit_sold_label)
 
 # prediction
-nn3 <- knn(train= wish_model_numbers.train, test = wish_model_numbers.test, cl= cl, k=3)
-nn5 <- knn(train= wish_model_numbers.train, test = wish_model_numbers.test, cl =cl, k=5)
-nn7 <- knn(train= wish_model_numbers.train, test = wish_model_numbers.test, cl = cl, k=7)
-nn10 <- knn(train= wish_model_numbers.train, test = wish_model_numbers.test, cl =cl, k=10)
+nn3 <- knn(train= wish_df_scale.train, test = wish_df_scale.test, cl= cl, k=3)
+nn5 <- knn(train= wish_df_scale.train, test = wish_df_scale.test, cl =cl, k=5)
+nn7 <- knn(train= wish_df_scale.train, test = wish_df_scale.test, cl = cl, k=7)
+nn10 <- knn(train= wish_df_scale.train, test = wish_df_scale.test, cl =cl, k=10)
 
-acc.3 <- 100 * sum(wish_model_numbers.test$image_confidence == nn3)/NROW(wish_model_numbers.test$image_confidence) # 99.778%
-acc.5 <- 100 * sum(wish_model_numbers.test$image_confidence == nn5)/NROW(wish_model_numbers.test$image_confidence) # 99.778%
-acc.7 <- 100 * sum(wish_model_numbers.test$image_confidence == nn7)/NROW(wish_model_numbers.test$image_confidence) # 99.5575%
-acc.10 <- 100 * sum(wish_model_numbers.test$image_confidence == nn10)/NROW(wish_model_numbers.test$image_confidence) # 99.5575%
+acc.3 <- 100 * sum(wish_df_scale.test$wish.unit_sold_label == nn3)/NROW(wish_df_scale.test$wish.unit_sold_label) # 85.7
+acc.5 <- 100 * sum(wish_df_scale.test$wish.unit_sold_label == nn5)/NROW(wish_df_scale.test$wish.unit_sold_label) # 83.2
+acc.7 <- 100 * sum(wish_df_scale.test$wish.unit_sold_label == nn7)/NROW(wish_df_scale.test$wish.unit_sold_label) # 84.8
+acc.10 <- 100 * sum(wish_df_scale.test$wish.unit_sold_label == nn10)/NROW(wish_df_scale.test$wish.unit_sold_label) # 81.0
 
+plot(wish_df_scale)
 
